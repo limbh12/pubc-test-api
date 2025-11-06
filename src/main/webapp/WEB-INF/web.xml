@@ -19,7 +19,7 @@
     <!-- Spring Profile -->
     <context-param>
         <param-name>spring.profiles.active</param-name>
-        <param-value>${spring.profiles.active:mock}</param-value>
+        <param-value>mock</param-value>
     </context-param>
 
     <!-- ================================================================ -->
@@ -64,7 +64,11 @@
     </servlet>
     <servlet-mapping>
         <servlet-name>appServlet</servlet-name>
-        <url-pattern>/</url-pattern>
+        <url-pattern>*.do</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>appServlet</servlet-name>
+        <url-pattern>/mvc/*</url-pattern>
     </servlet-mapping>
 
     <!-- ================================================================ -->
@@ -73,11 +77,15 @@
     <servlet>
         <servlet-name>CXFServlet</servlet-name>
         <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>
-        <load-on-startup>2</load-on-startup>
+        <init-param>
+            <param-name>bus</param-name>
+            <param-value>cxf</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
         <servlet-name>CXFServlet</servlet-name>
-        <url-pattern>/services/*</url-pattern>
+        <url-pattern>/api/*</url-pattern>
     </servlet-mapping>
 
     <!-- ================================================================ -->

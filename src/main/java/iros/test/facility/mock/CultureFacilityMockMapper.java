@@ -2,6 +2,7 @@ package iros.test.facility.mock;
 
 import iros.test.facility.dao.CultureFacilityMapper;
 import iros.test.facility.domain.CultureFacilityVO;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
@@ -15,8 +16,9 @@ import java.util.stream.Collectors;
  * @author PUBC Test API
  * @version 1.0
  */
-@Repository("cultureFacilityMapper")
+@Repository("cultureFacilityMockMapper")
 @Profile("mock")
+@Primary
 public class CultureFacilityMockMapper implements CultureFacilityMapper {
 
     private static final List<CultureFacilityVO> MOCK_DATA = new ArrayList<>();

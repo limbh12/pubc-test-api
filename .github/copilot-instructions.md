@@ -2,179 +2,279 @@
 
 ## 프로젝트 개요
 
-이 프로젝트는 PUBC(공통연계모듈) 인증/로깅 프레임워크를 사용하는 **공공데이터 포털 OpenAPI 통합 시스템**을 위한 **문서 전용 설계 프로젝트**입니다. **아직 소스코드는 없으며** - 포괄적인 아키텍처 및 설계 문서만 존재합니다.
+한국 정부 공개 API 표준인 **PUBC(공통연계모듈)** 기반 문화시설 정보 조회 시스템입니다.
 
 **도메인**: 읽기 전용 문화시설 정보 API (박물관, 도서관, 미술관)  
-**아키텍처**: PUBC 통합 계층을 포함한 7계층 아키텍처  
-**기술 스택**: JDK 1.8, Spring 4.3.30, Apache CXF 3.3.13, MyBatis 3.5.13, iBATIS 2.3.4
+**아키텍처**: PUBC 인증/로깅 계층 + 7계층 아키텍처  
+**기술 스택**: JDK 1.8, Spring 4.3.30, Apache CXF 3.3.13, MyBatis 3.5.13, JBoss EAP 7.4  
+**특징**: Mock 데이터로 DB 없이 실행 가능, JAX-RS REST API 제공
 
 ## 핵심 아키텍처 개념
 
-### 1. PUBC 통합 패턴
+### 1. PUBC 통합 패턴 (필수)
 
-PUBC는 한국 정부 공개 API를 위한 필수 인증/로깅 게이트웨이입니다. **모든 API 호출은 반드시**:
-
-1. **인증** `CommonProc.authServiceCall(request)` 호출 → `UserCrtfcVO` 반환
-2. **검증** `troblTyCode` 필드 확인:
-   - `"00"` = 성공, 비즈니스 로직 진행
-   - `"30"` = 유효하지 않은 서비스키
-   - `"32"` = 허가되지 않은 IP
-3. **사용 로깅** `finally` 블록에서 `UseSttusServiceCall(userCrtfcVO)` 호출 (항상 실행)
+**모든 컨트롤러는 반드시 PUBC 인증/로깅을 거쳐야 합니다:**
 
 ```java
-// 필수 패턴 - 모든 컨트롤러가 반드시 따라야 함:
-UserCrtfcVO userCrtfcVO = commonProc.authServiceCall(request);
-if (!"00".equals(userCrtfcVO.getTroblTyCode())) {
-    return createErrorResponse(userCrtfcVO);
-}
-try {
-    // 비즈니스 로직
-} finally {
-    commonProc.useSttusServiceCall(userCrtfcVO); // 항상 로깅
+// 현재 구현: MockCommonProc 사용 (DB 없이 테스트 가능)
+@Autowired
+private MockCommonProc mockCommonProc;
+
+public Response getList(@Context HttpServletRequest request) {
+    // 1. 인증: serviceKey 파라미터 검증
+    UserCrtfcVO userCrtfc = mockCommonProc.authServiceCall(request);
+    
+    try {
+        // 2. 비즈니스 로직
+        List<CultureFacilityVO> result = cultureFacilityService.getFacilityList(...);
+        return Response.ok(result).build();
+    } finally {
+        // 3. 로깅: API 호출 기록 (항상 실행)
+        mockCommonProc.insertPubcLog(request, userCrtfc, result);
+    }
 }
 ```
 
-**이유**: PUBC는 수정할 수 없는 레거시 정부 모듈(`iros_pubc_1.1.jar`)입니다. 모든 통합은 PUBC API에 맞춰야 합니다.
+**유효한 테스트 서비스키** (MockCommonProc.java 참조):
+- `TEST_KEY_001`, `TEST_KEY_002`, `DEMO_KEY`, `DEV_KEY`
 
-### 2. 읽기 전용 API 설계
+**실제 운영 환경**에서는 `MockCommonProc` 대신 실제 `CommonProc`(PUBC 모듈 연동)을 사용해야 합니다.
 
-**이 시스템은 SELECT 쿼리만 지원합니다** - INSERT/UPDATE/DELETE 작업 없음.
+### 2. 읽기 전용 API 설계 (강제)
 
-- **도메인 모델**: `TB_CULTURE_FACILITY` (문화시설 마스터 데이터)
-- **API 작업**: `getFacilityList()`, `getFacility()`, `getTotalCount()`
-- **Mapper 메서드**: MyBatis `CultureFacilityMapper.java`에 `select*` 메서드만 사용
+**절대 생성하지 말 것**: POST/PUT/DELETE 엔드포인트, INSERT/UPDATE/DELETE SQL
 
-코드 생성 시 **절대로** POST/PUT/DELETE 엔드포인트나 CUD SQL 작업을 생성하지 마세요.
-
-### 3. 이중 SQL Mapper 아키텍처
-
-**두 개의 SQL 매핑 프레임워크가 공존**:
-
-- **MyBatis 3.5.13**: 애플리케이션 코드용 (새로운 `@Mapper` 인터페이스 스타일)
-- **iBATIS 2.3.4**: PUBC 모듈 내부용 (레거시 `SqlMapClient`, 수정 금지)
-
-동일한 `DataSource`를 공유하지만 별도 네임스페이스를 사용합니다. Spring 설정에서 둘 다 초기화해야 합니다:
-
-```xml
-<!-- 애플리케이션용 MyBatis -->
-<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
-    <property name="dataSource" ref="dataSource"/>
-</bean>
-
-<!-- PUBC용 iBATIS (iros_pubc_1.1.jar 필요) -->
-<bean id="sqlMapClient" class="org.springframework.orm.ibatis.SqlMapClientFactoryBean">
-    <property name="dataSource" ref="dataSource"/>
-    <property name="configLocation" value="classpath:iros/pubc/sql-map-config.xml"/>
-</bean>
+**구현된 엔드포인트** (`CultureFacilityRestService.java`):
+```java
+@GET @Path("")                    // 목록 조회
+@GET @Path("/{facilityId}")       // 상세 조회
+@GET @Path("/types")              // 시설 유형 목록
 ```
 
-### 4. Mock 데이터 개발 전략
+**Mapper 메서드** (`CultureFacilityMapper.java`):
+```java
+List<CultureFacilityVO> selectFacilityList(Map<String, Object> params);
+CultureFacilityVO selectFacilityById(String facilityId);
+int selectTotalCount(Map<String, Object> params);
+```
 
-**권장 방식**: 데이터베이스 설정 대신 인메모리 mock 구현을 사용합니다.
+### 3. Mock 데이터 개발 전략 (기본)
 
-**이유**: DB 설치 없이 개발, 테스트, 데모를 단순화합니다. `CLAUDE.md` 170-400줄에서 완전한 mock 구현을 확인하세요:
+**현재 구현 방식**: 데이터베이스 없이 인메모리 Mock 데이터 사용
 
-- `CultureFacilityMockMapper.java`: Java 8 Stream 필터링을 사용한 정적 mock 데이터
-- `MockCommonProc.java`: 미리 정의된 테스트 키를 사용한 PUBC 인증 스텁
-- 유효한 테스트 키: `TEST_KEY_001`, `DEMO_KEY`, `DEV_KEY`
+**Mock Mapper** (`CultureFacilityMockMapper.java`):
+```java
+@Repository("cultureFacilityMapper")
+public class CultureFacilityMockMapper implements CultureFacilityMapper {
+    private static final List<CultureFacilityVO> MOCK_DATA = new ArrayList<>();
+    
+    static {
+        // 정적 초기화: 50개 샘플 시설 데이터
+        MOCK_DATA.add(createFacility("FAC001", "국립중앙박물관", "박물관", "11", ...));
+        MOCK_DATA.add(createFacility("FAC002", "서울시립미술관", "미술관", "11", ...));
+        // ...
+    }
+    
+    @Override
+    public List<CultureFacilityVO> selectFacilityList(Map<String, Object> params) {
+        return MOCK_DATA.stream()
+            .filter(f -> matchesCriteria(f, params))  // Java 8 Stream 활용
+            .collect(Collectors.toList());
+    }
+}
+```
 
-Mock 모드는 `context-app.xml`에서 PUBC Spring import를 제외하여 활성화됩니다.
+**장점**: DB 설치 불필요, 빠른 개발/테스트, 일관된 데모 데이터
 
 ## 개발 워크플로우
 
-### 프로젝트 구조 (목표 구현)
+### 빌드 및 실행
 
-```
-src/iros/test/
-├── common/
-│   ├── CommonProc.java          # PUBC 통합 파사드 (중요)
-│   ├── Constants.java
-│   ├── exception/               # 커스텀 예외
-│   └── util/                    # JSON/XML/날짜 유틸리티
-├── rest/
-│   ├── controller/              # JAX-RS 엔드포인트 (GET만)
-│   └── dto/                     # ApiResponse, ErrorResponse
-├── soap/
-│   ├── service/                 # JAX-WS 서비스 (조회만)
-│   └── dto/                     # SOAP 응답 래퍼
-├── facility/                    # 도메인 계층
-│   ├── service/                 # 비즈니스 로직 (SELECT만)
-│   ├── dao/                     # MyBatis @Mapper 인터페이스
-│   └── vo/                      # CultureFacilityVO
-└── config/                      # Spring Java Config 클래스
+```bash
+# 1. 프로젝트 전용 JDK/JBoss 설치 (최초 1회)
+./scripts/install-jdk.sh
+./scripts/install-jboss.sh
+
+# 2. Maven 빌드
+mvn clean package
+
+# 3. WAR 파일 배포
+cp target/pubc-test-api.war env/jboss/wildfly-26.1.3.Final/standalone/deployments/
+
+# 4. JBoss 시작
+./bin/jboss-start.sh
+
+# 5. API 테스트
+curl "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001"
 ```
 
-### 주요 설정 파일
+**중요**: 프로젝트는 `env/` 디렉토리에 독립적인 JDK 1.8과 JBoss를 설치하여 시스템 환경과 완전히 분리됩니다.
 
-- `docs/00_기술스택_JDK18.md`: 정식 의존성 버전
-- `docs/02_시스템아키텍처설계서.md`: 7계층 아키텍처 상세
-- `CLAUDE.md`: AI 전용 구현 패턴 및 mock 코드 예제
-- `PUBC.md`: PUBC 모듈 내부 (62개 소스파일 분석)
-- `OASIS.md`: OpenAPI 자동생성툴 참조 아키텍처
-
-### REST API 패턴
-
-**엔드포인트 템플릿** (`docs/03_API명세서.md`에서):
+### 프로젝트 구조 (실제 구현)
 
 ```
-GET /api/cultureFacilities?serviceKey={key}&facilityType={type}&regionCode={code}&pageNo=1&numOfRows=10
+src/main/java/iros/test/
+├── facility/                           # 문화시설 도메인 (핵심)
+│   ├── controller/
+│   │   └── CultureFacilityRestService.java  # JAX-RS 컨트롤러
+│   ├── service/
+│   │   ├── CultureFacilityService.java      # 서비스 인터페이스
+│   │   └── CultureFacilityServiceImpl.java  # 서비스 구현
+│   ├── dao/
+│   │   └── CultureFacilityMapper.java       # MyBatis Mapper 인터페이스
+│   ├── mock/
+│   │   └── CultureFacilityMockMapper.java   # Mock 데이터 구현 ⭐
+│   └── domain/
+│       └── CultureFacilityVO.java           # Value Object
+│
+├── user/                               # PUBC 통합 (Mock)
+│   ├── domain/
+│   │   └── UserCrtfcVO.java                 # 인증 정보
+│   └── mock/
+│       ├── MockCommonProc.java              # PUBC Mock 구현 ⭐
+│       └── MockUserCrtfcVO.java             # Mock 인증 객체
+│
+├── common/                             # 공통 모듈
+│   └── interceptor/
+│       └── PubcAuthInterceptor.java         # 인증 인터셉터
+│
+src/main/resources/
+├── config/
+│   ├── application.properties               # 설정
+│   └── spring/
+│       ├── root-context.xml                 # 루트 컨텍스트
+│       └── servlet-context.xml              # 웹 컨텍스트
+└── mybatis/
+    └── mapper/                              # MyBatis XML (향후)
 ```
 
-**응답 형식**:
-```json
-{
-  "code": "000",
-  "msg": "OK",
-  "data": {
-    "totalCount": 150,
-    "pageNo": 1,
-    "numOfRows": 10,
-    "items": [/* 시설 목록 */]
-  }
+### Java 8 기능 활용
+
+**Stream API** (필터링/변환):
+```java
+// CultureFacilityMockMapper.java 참조
+facilities.stream()
+    .filter(f -> facilityType == null || facilityType.equals(f.getFacilityType()))
+    .filter(f -> regionCode == null || regionCode.equals(f.getRegionCode()))
+    .skip((pageNum - 1) * pageSize)
+    .limit(pageSize)
+    .collect(Collectors.toList());
+```
+
+**Lambda Expression** (간결한 콜백):
+```java
+facilities.forEach(f -> logger.debug("Facility: {}", f.getFacilityName()));
+```
+
+**Optional** (null 안전):
+```java
+Optional.ofNullable(mapper.selectFacilityById(id))
+    .orElseThrow(() -> new NotFoundException("시설을 찾을 수 없습니다"));
+```
+
+## REST API 패턴
+
+### 엔드포인트 규칙
+
+**기본 URL**: `http://localhost:8080/pubc-test-api/api/facilities`
+
+**구현된 엔드포인트**:
+```java
+@Path("/facilities")
+public class CultureFacilityRestService {
+    
+    @GET @Path("")
+    // GET /api/facilities?serviceKey={key}&facilityType={type}&pageNum=1&pageSize=10
+    public Response getList(...) { }
+    
+    @GET @Path("/{facilityId}")
+    // GET /api/facilities/FAC001?serviceKey={key}
+    public Response getById(@PathParam("facilityId") String facilityId) { }
+    
+    @GET @Path("/types")
+    // GET /api/facilities/types?serviceKey={key}
+    public Response getTypes(...) { }
 }
 ```
 
-**에러 코드** (PUBC에서):
-- `000`: 성공
-- `030`: 유효하지 않은 서비스키 (`SERVICE_KEY_IS_NOT_REGISTERED_ERROR`)
-- `031`: 만료된 서비스 (`DEADLINE_HAS_EXPIRED_ERROR`)
-- `032`: 허가되지 않은 IP (`UNREGISTERED_IP_ERROR`)
+### 응답 형식
 
-### 데이터베이스 스키마
-
-**애플리케이션 테이블** (`docs/04_데이터베이스스키마설계서.md`):
-```sql
-TB_CULTURE_FACILITY (
-  FACILITY_ID      VARCHAR(20) PK,
-  FACILITY_NAME    VARCHAR(100),
-  FACILITY_TYPE    VARCHAR(50),   -- 박물관/미술관/도서관
-  REGION_CODE      VARCHAR(2),    -- 11=서울, 26=부산, 41=경기
-  ADDRESS, PHONE, LATITUDE, LONGITUDE, OPEN_TIME, HOMEPAGE, MANAGE_AGENCY
-)
+**성공 응답** (200 OK):
+```json
+{
+  "code": "000",
+  "message": "정상 처리되었습니다",
+  "totalCount": 50,
+  "items": [
+    {
+      "facilityId": "FAC001",
+      "facilityName": "국립중앙박물관",
+      "facilityType": "박물관",
+      "regionCode": "11",
+      "address": "서울특별시 용산구 서빙고로 137",
+      "phone": "02-2077-9000"
+    }
+  ]
+}
 ```
 
-**PUBC 테이블** (`iros_pubc_1.1.jar`에서 관리):
-- `TN_PUBC_USER_CRTFC`: 서비스키 인증
-- `TN_PUBC_USE_STTUS_INFO`: API 사용 현황 로깅
+**에러 응답** (400/500):
+```json
+{
+  "code": "400",
+  "message": "유효하지 않은 서비스 키입니다",
+  "timestamp": "2025-11-06T10:30:00"
+}
+```
 
-## Java 8 사용 패턴
+### 필수 파라미터
 
-**Java 8 최신 기능 활용** (`docs/00_기술스택_JDK18.md`에 따라):
+모든 엔드포인트는 **serviceKey** 필수:
+- Query Parameter: `?serviceKey=TEST_KEY_001`
+- Header: `X-Service-Key: TEST_KEY_001`
+
+유효한 테스트 키: `TEST_KEY_001`, `TEST_KEY_002`, `DEMO_KEY`, `DEV_KEY`
+
+## 데이터 모델
+
+### 문화시설 VO (CultureFacilityVO)
 
 ```java
-// 시설 필터링을 위한 Stream API
-facilities.stream()
-    .filter(f -> "박물관".equals(f.getFacilityType()))
-    .filter(f -> "11".equals(f.getRegionCode()))
-    .collect(Collectors.toList());
-
-// null 처리를 위한 Optional
-Optional.ofNullable(mapper.selectFacility(id))
-    .orElseThrow(() -> new NotFoundException("시설 없음"));
-
-// 서비스 계층의 Lambda
-userList.forEach(user -> log.info("User: {}", user.getUserName()));
+public class CultureFacilityVO {
+    private String facilityId;        // 시설 ID (PK)
+    private String facilityName;      // 시설명
+    private String facilityType;      // 시설 유형 (박물관/미술관/도서관)
+    private String regionCode;        // 지역 코드 (11:서울, 26:부산, 41:경기)
+    private String address;           // 주소
+    private String phone;             // 전화번호
+    private Double latitude;          // 위도
+    private Double longitude;         // 경도
+    private String openTime;          // 운영 시간
+    private String homepage;          // 홈페이지
+    private String manageAgency;      // 관리 기관
+    private LocalDateTime updateDate; // 수정일
+}
 ```
+
+### 인증 정보 VO (UserCrtfcVO)
+
+```java
+public class UserCrtfcVO {
+    private String serviceKey;        // 서비스 키
+    private String userName;          // 사용자명
+    private String userIp;            // IP 주소
+    private LocalDateTime authTime;   // 인증 시각
+}
+```
+
+## 주요 설정 파일
+
+- `docs/00_기술스택_JDK18.md`: 정식 의존성 버전
+- `docs/02_시스템아키텍처설계서.md`: 7계층 아키텍처 상세
+- `docs/03_API명세서.md`: 완전한 REST/SOAP API 명세
+- `CLAUDE.md`: AI 전용 구현 패턴 및 mock 코드 예제 (2500+ 라인)
+- `PUBC.md`: PUBC 모듈 내부 분석
+- `pom.xml`: Maven 의존성 (Spring 4.3.30, CXF 3.3.13, MyBatis 3.5.13)
 
 ## 프로젝트별 규칙
 
@@ -236,3 +336,514 @@ userList.forEach(user -> log.info("User: {}", user.getUserName()));
 2. 박물관/미술관/도서관 외에 추가 시설 유형이 있는지?
 3. SOAP과 REST가 동일한 서비스 계층을 공유할지, 또는 별도 구현할지?
 4. 규정 준수를 위해 어떤 수준의 로깅 상세도가 필요한지 (최소 vs. 전체 요청/응답)?
+
+---
+
+## 실제 운영 환경 구성
+
+### 1. PUBC 모듈 실제 연동
+
+**Mock 대신 실제 PUBC 사용 시:**
+
+#### CommonProc 구현 (실제 PUBC 연동)
+
+```java
+package iros.test.common;
+
+import iros.pubc.UserCrtfcProcessService;
+import iros.pubc.UseSttusService;
+import iros.pubc.vo.UserCrtfcVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+import javax.servlet.http.HttpServletRequest;
+
+/**
+ * 실제 PUBC 모듈 연동 클래스
+ * @Profile("production") - 운영 환경에서만 활성화
+ */
+@Component
+@Profile("production")
+public class CommonProc {
+
+    @Autowired
+    private UserCrtfcProcessService userCrtfcProcessService;  // PUBC 인증 서비스
+    
+    @Autowired
+    private UseSttusService useSttusService;  // PUBC 사용현황 로깅 서비스
+
+    /**
+     * PUBC 인증 처리
+     * @param request HTTP 요청
+     * @return 사용자 인증 정보
+     */
+    public UserCrtfcVO authServiceCall(HttpServletRequest request) {
+        try {
+            // PUBC 모듈의 인증 서비스 호출
+            UserCrtfcVO userCrtfc = userCrtfcProcessService.userCrtfcProcess(request);
+            
+            // 인증 결과 검증
+            String troblTyCode = userCrtfc.getTroblTyCode();
+            
+            if ("00".equals(troblTyCode)) {
+                logger.info("PUBC 인증 성공 - ServiceKey: {}", userCrtfc.getServiceKey());
+            } else {
+                logger.warn("PUBC 인증 실패 - Code: {}, Message: {}", 
+                    troblTyCode, userCrtfc.getTroblCn());
+            }
+            
+            return userCrtfc;
+            
+        } catch (Exception e) {
+            logger.error("PUBC 인증 오류", e);
+            throw new RuntimeException("인증 처리 중 오류가 발생했습니다", e);
+        }
+    }
+
+    /**
+     * PUBC 사용현황 로깅
+     * @param userCrtfc 사용자 인증 정보
+     */
+    public void useSttusServiceCall(UserCrtfcVO userCrtfc) {
+        try {
+            // PUBC 모듈의 사용현황 로깅 서비스 호출
+            useSttusService.insertUseSttus(userCrtfc);
+            logger.debug("PUBC 로깅 완료 - ServiceKey: {}", userCrtfc.getServiceKey());
+            
+        } catch (Exception e) {
+            // 로깅 실패는 비즈니스 로직에 영향을 주지 않음
+            logger.error("PUBC 로깅 오류 (무시)", e);
+        }
+    }
+}
+```
+
+#### Spring 설정 (PUBC 활성화)
+
+**root-context.xml** - PUBC 모듈 Import:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-4.3.xsd">
+
+    <!-- 실제 PUBC 모듈 설정 Import (iros_pubc_1.1.jar에서 제공) -->
+    <import resource="classpath:iros/pubc/spring/context-common-pubc.xml"/>
+    <import resource="classpath:iros/pubc/spring/context-datasource-pubc.xml"/>
+    <import resource="classpath:iros/pubc/spring/context-sqlMap-pubc.xml"/>
+    
+    <!-- 애플리케이션 Bean 스캔 -->
+    <context:component-scan base-package="iros.test"/>
+</beans>
+```
+
+#### PUBC 에러 코드 처리
+
+```java
+// 컨트롤러에서 PUBC 에러 처리
+public Response getList(@Context HttpServletRequest request) {
+    UserCrtfcVO userCrtfc = commonProc.authServiceCall(request);
+    
+    // PUBC 표준 에러 코드 체크
+    String errorCode = userCrtfc.getTroblTyCode();
+    
+    if (!"00".equals(errorCode)) {
+        // 인증 실패 처리
+        Map<String, Object> error = new HashMap<>();
+        error.put("code", errorCode);
+        error.put("message", getPubcErrorMessage(errorCode));
+        return Response.status(getHttpStatus(errorCode)).entity(error).build();
+    }
+    
+    // ... 비즈니스 로직
+}
+
+private String getPubcErrorMessage(String code) {
+    switch (code) {
+        case "11": return "필수 파라미터 누락";
+        case "30": return "등록되지 않은 서비스키";
+        case "31": return "기한 만료된 서비스키";
+        case "32": return "허가되지 않은 IP";
+        case "99": return "시스템 오류";
+        default: return "알 수 없는 오류";
+    }
+}
+```
+
+### 2. SOAP 웹 서비스 구현
+
+**JAX-WS 기반 SOAP 서비스:**
+
+#### SOAP 서비스 인터페이스
+
+```java
+package iros.test.facility.soap;
+
+import iros.test.facility.domain.CultureFacilityVO;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebService;
+import java.util.List;
+
+/**
+ * 문화시설 SOAP 웹 서비스
+ */
+@WebService(name = "CultureFacilityService", 
+            targetNamespace = "http://soap.facility.test.iros/")
+public interface CultureFacilitySoapService {
+
+    /**
+     * 문화시설 목록 조회
+     */
+    @WebMethod
+    CultureFacilityListResponse getFacilityList(
+        @WebParam(name = "serviceKey") String serviceKey,
+        @WebParam(name = "facilityType") String facilityType,
+        @WebParam(name = "regionCode") String regionCode,
+        @WebParam(name = "pageNum") Integer pageNum,
+        @WebParam(name = "pageSize") Integer pageSize
+    );
+
+    /**
+     * 문화시설 상세 조회
+     */
+    @WebMethod
+    CultureFacilityResponse getFacilityById(
+        @WebParam(name = "serviceKey") String serviceKey,
+        @WebParam(name = "facilityId") String facilityId
+    );
+}
+```
+
+#### SOAP 서비스 구현
+
+```java
+package iros.test.facility.soap.impl;
+
+import iros.test.facility.service.CultureFacilityService;
+import iros.test.facility.soap.CultureFacilitySoapService;
+import iros.test.user.mock.MockCommonProc;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import javax.jws.WebService;
+import javax.servlet.http.HttpServletRequest;
+import javax.annotation.Resource;
+import javax.xml.ws.WebServiceContext;
+import javax.xml.ws.handler.MessageContext;
+
+/**
+ * 문화시설 SOAP 서비스 구현
+ */
+@Service
+@WebService(
+    serviceName = "CultureFacilityService",
+    portName = "CultureFacilityPort",
+    targetNamespace = "http://soap.facility.test.iros/",
+    endpointInterface = "iros.test.facility.soap.CultureFacilitySoapService"
+)
+public class CultureFacilitySoapServiceImpl implements CultureFacilitySoapService {
+
+    @Autowired
+    private CultureFacilityService cultureFacilityService;
+    
+    @Autowired
+    private MockCommonProc mockCommonProc;
+    
+    @Resource
+    private WebServiceContext wsContext;
+
+    @Override
+    public CultureFacilityListResponse getFacilityList(
+            String serviceKey, String facilityType, String regionCode,
+            Integer pageNum, Integer pageSize) {
+        
+        HttpServletRequest request = getHttpRequest();
+        UserCrtfcVO userCrtfc = mockCommonProc.authServiceCall(request);
+        
+        CultureFacilityListResponse response = new CultureFacilityListResponse();
+        
+        try {
+            if (!"00".equals(userCrtfc.getTroblTyCode())) {
+                response.setCode(userCrtfc.getTroblTyCode());
+                response.setMessage(userCrtfc.getTroblCn());
+                return response;
+            }
+            
+            List<CultureFacilityVO> facilities = 
+                cultureFacilityService.getFacilityList(facilityType, regionCode, 
+                    pageNum != null ? pageNum : 1, 
+                    pageSize != null ? pageSize : 10);
+            
+            response.setCode("000");
+            response.setMessage("정상 처리되었습니다");
+            response.setFacilities(facilities);
+            response.setTotalCount(facilities.size());
+            
+        } finally {
+            mockCommonProc.insertPubcLog(request, userCrtfc, response);
+        }
+        
+        return response;
+    }
+    
+    private HttpServletRequest getHttpRequest() {
+        MessageContext mc = wsContext.getMessageContext();
+        return (HttpServletRequest) mc.get(MessageContext.SERVLET_REQUEST);
+    }
+}
+```
+
+#### CXF SOAP 설정
+
+**servlet-context.xml**:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:jaxws="http://cxf.apache.org/jaxws"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+           http://cxf.apache.org/jaxws
+           http://cxf.apache.org/schemas/jaxws.xsd">
+
+    <!-- CXF SOAP 서비스 등록 -->
+    <jaxws:endpoint 
+        id="cultureFacilitySoapService"
+        implementor="#cultureFacilitySoapServiceImpl"
+        address="/CultureFacilityService">
+        
+        <!-- WSDL 자동 생성 활성화 -->
+        <jaxws:properties>
+            <entry key="publishedEndpointUrl" 
+                   value="http://localhost:8080/pubc-test-api/services/CultureFacilityService"/>
+        </jaxws:properties>
+    </jaxws:endpoint>
+</beans>
+```
+
+#### SOAP 테스트
+
+**WSDL 확인**:
+```
+http://localhost:8080/pubc-test-api/services/CultureFacilityService?wsdl
+```
+
+**SoapUI 요청 예시**:
+```xml
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+                  xmlns:soap="http://soap.facility.test.iros/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <soap:getFacilityList>
+         <serviceKey>TEST_KEY_001</serviceKey>
+         <facilityType>박물관</facilityType>
+         <regionCode>11</regionCode>
+         <pageNum>1</pageNum>
+         <pageSize>10</pageSize>
+      </soap:getFacilityList>
+   </soapenv:Body>
+</soapenv:Envelope>
+```
+
+### 3. CUBRID 데이터베이스 연동
+
+**운영 환경에서 실제 CUBRID DB 사용:**
+
+#### CUBRID JDBC 드라이버 추가
+
+**pom.xml**:
+
+```xml
+<!-- CUBRID JDBC Driver -->
+<dependency>
+    <groupId>cubrid</groupId>
+    <artifactId>cubrid-jdbc</artifactId>
+    <version>11.2.0.0005</version>
+</dependency>
+```
+
+#### DataSource 설정
+
+**root-context.xml** (운영 프로파일):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-4.3.xsd">
+
+    <!-- CUBRID DataSource (HikariCP 사용) -->
+    <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+        <property name="driverClassName" value="cubrid.jdbc.driver.CUBRIDDriver"/>
+        <property name="jdbcUrl" value="jdbc:cubrid:localhost:33000:pubcdb:::?charset=utf8"/>
+        <property name="username" value="dba"/>
+        <property name="password" value="${db.password}"/>
+        
+        <!-- Connection Pool 설정 -->
+        <property name="maximumPoolSize" value="20"/>
+        <property name="minimumIdle" value="5"/>
+        <property name="connectionTimeout" value="30000"/>
+        <property name="idleTimeout" value="600000"/>
+        <property name="maxLifetime" value="1800000"/>
+    </bean>
+
+    <!-- MyBatis SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:config/mybatis/mybatis-config.xml"/>
+        <property name="mapperLocations" value="classpath:mybatis/mapper/**/*.xml"/>
+    </bean>
+
+    <!-- MyBatis Mapper 스캔 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="iros.test.**.dao"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+    
+    <!-- Transaction Manager -->
+    <bean id="transactionManager" 
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+</beans>
+```
+
+#### MyBatis Mapper XML
+
+**CultureFacilityMapper.xml**:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="iros.test.facility.dao.CultureFacilityMapper">
+
+    <!-- Result Map -->
+    <resultMap id="facilityResultMap" type="iros.test.facility.domain.CultureFacilityVO">
+        <id property="facilityId" column="FACILITY_ID"/>
+        <result property="facilityName" column="FACILITY_NAME"/>
+        <result property="facilityType" column="FACILITY_TYPE"/>
+        <result property="regionCode" column="REGION_CODE"/>
+        <result property="address" column="ADDRESS"/>
+        <result property="phone" column="PHONE"/>
+        <result property="latitude" column="LATITUDE"/>
+        <result property="longitude" column="LONGITUDE"/>
+        <result property="openTime" column="OPEN_TIME"/>
+        <result property="homepage" column="HOMEPAGE"/>
+        <result property="manageAgency" column="MANAGE_AGENCY"/>
+        <result property="updateDate" column="UPDATE_DATE"/>
+    </resultMap>
+
+    <!-- 목록 조회 -->
+    <select id="selectFacilityList" parameterType="map" resultMap="facilityResultMap">
+        SELECT 
+            FACILITY_ID, FACILITY_NAME, FACILITY_TYPE, REGION_CODE,
+            ADDRESS, PHONE, LATITUDE, LONGITUDE,
+            OPEN_TIME, HOMEPAGE, MANAGE_AGENCY, UPDATE_DATE
+        FROM TB_CULTURE_FACILITY
+        WHERE 1=1
+        <if test="facilityType != null and facilityType != ''">
+            AND FACILITY_TYPE = #{facilityType}
+        </if>
+        <if test="regionCode != null and regionCode != ''">
+            AND REGION_CODE = #{regionCode}
+        </if>
+        <if test="facilityName != null and facilityName != ''">
+            AND FACILITY_NAME LIKE CONCAT('%', #{facilityName}, '%')
+        </if>
+        ORDER BY UPDATE_DATE DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 상세 조회 -->
+    <select id="selectFacilityById" parameterType="string" resultMap="facilityResultMap">
+        SELECT 
+            FACILITY_ID, FACILITY_NAME, FACILITY_TYPE, REGION_CODE,
+            ADDRESS, PHONE, LATITUDE, LONGITUDE,
+            OPEN_TIME, HOMEPAGE, MANAGE_AGENCY, UPDATE_DATE
+        FROM TB_CULTURE_FACILITY
+        WHERE FACILITY_ID = #{facilityId}
+    </select>
+
+    <!-- 총 건수 조회 -->
+    <select id="selectTotalCount" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_CULTURE_FACILITY
+        WHERE 1=1
+        <if test="facilityType != null and facilityType != ''">
+            AND FACILITY_TYPE = #{facilityType}
+        </if>
+        <if test="regionCode != null and regionCode != ''">
+            AND REGION_CODE = #{regionCode}
+        </if>
+        <if test="facilityName != null and facilityName != ''">
+            AND FACILITY_NAME LIKE CONCAT('%', #{facilityName}, '%')
+        </if>
+    </select>
+</mapper>
+```
+
+#### 환경별 프로파일 전환
+
+**application.properties**:
+
+```properties
+# 개발 환경 (Mock 사용)
+spring.profiles.active=mock
+
+# 운영 환경 (실제 PUBC + CUBRID 사용)
+# spring.profiles.active=production
+
+# CUBRID 연결 정보
+db.driver=cubrid.jdbc.driver.CUBRIDDriver
+db.url=jdbc:cubrid:localhost:33000:pubcdb:::?charset=utf8
+db.username=dba
+db.password=YOUR_PASSWORD_HERE
+
+# Connection Pool
+db.pool.max=20
+db.pool.min=5
+```
+
+#### 프로파일별 Bean 활성화
+
+```java
+// Mock 환경에서만 활성화
+@Component
+@Profile("mock")
+public class CultureFacilityMockMapper implements CultureFacilityMapper {
+    // Mock 구현
+}
+
+// 운영 환경에서만 활성화
+@Component
+@Profile("production")
+public class CommonProc {
+    // 실제 PUBC 연동
+}
+```
+
+#### 배포 시 프로파일 지정
+
+```bash
+# JBoss 시작 시 프로파일 지정
+export JAVA_OPTS="$JAVA_OPTS -Dspring.profiles.active=production"
+./bin/jboss-start.sh
+
+# 또는 WAR 배포 시 jboss-web.xml에 지정
+<jboss-web>
+    <context-root>/pubc-test-api</context-root>
+    <context-param>
+        <param-name>spring.profiles.active</param-name>
+        <param-value>production</param-value>
+    </context-param>
+</jboss-web>
+```

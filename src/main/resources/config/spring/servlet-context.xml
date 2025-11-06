@@ -64,32 +64,25 @@
     <!-- ================================================================ -->
     <!-- Interceptors -->
     <!-- ================================================================ -->
+    <!-- Disabled in mock mode - authentication handled in controller layer -->
+    <!--
     <mvc:interceptors>
-        <!-- PUBC Authentication Interceptor -->
         <mvc:interceptor>
             <mvc:mapping path="/api/**"/>
             <mvc:mapping path="/ws/**"/>
             <bean class="iros.test.common.interceptor.PubcAuthInterceptor"/>
         </mvc:interceptor>
     </mvc:interceptors>
+    -->
 
     <!-- ================================================================ -->
     <!-- Apache CXF Configuration -->
     <!-- ================================================================ -->
-    <!-- CXF Bus -->
-    <bean id="cxf" class="org.apache.cxf.bus.spring.SpringBus" destroy-method="shutdown"/>
-
-    <!-- JAX-RS Server (REST API) -->
-    <jaxrs:server id="restApiServer" address="/api">
-        <jaxrs:serviceBeans>
-            <ref bean="cultureFacilityRestService"/>
-        </jaxrs:serviceBeans>
-        <jaxrs:providers>
-            <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider"/>
-        </jaxrs:providers>
-    </jaxrs:server>
+    <!-- CXF configuration moved to root-context.xml to be accessible by CXFServlet -->
 
     <!-- JAX-WS Endpoint (SOAP Web Service) -->
+    <!-- Disabled for now - SOAP service not yet implemented -->
+    <!--
     <jaxws:endpoint id="cultureFacilitySoapService"
                     implementor="#cultureFacilitySoapServiceImpl"
                     address="/ws/cultureFacility">
@@ -97,5 +90,6 @@
             <entry key="schema-validation-enabled" value="true"/>
         </jaxws:properties>
     </jaxws:endpoint>
+    -->
 
 </beans>

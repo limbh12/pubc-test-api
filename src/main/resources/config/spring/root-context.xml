@@ -48,7 +48,8 @@
     <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
         <property name="dataSource" ref="dataSource"/>
         <property name="configLocation" value="classpath:config/mybatis/mybatis-config.xml"/>
-        <property name="mapperLocations" value="classpath:mybatis/mapper/**/*.xml"/>
+        <!-- mapperLocations commented out for mock mode - no XML mappers needed -->
+        <!-- <property name="mapperLocations" value="classpath:mybatis/mapper/**/*.xml"/> -->
     </bean>
 
     <bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
@@ -56,10 +57,13 @@
     </bean>
 
     <!-- MyBatis Mapper Scan -->
+    <!-- Note: Disabled when using mock profile. Mock mappers provided by @Repository beans instead. -->
+    <!--
     <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
         <property name="basePackage" value="iros.test.**.dao"/>
         <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
     </bean>
+    -->
 
     <!-- ================================================================ -->
     <!-- Transaction Manager -->
@@ -70,5 +74,26 @@
 
     <!-- Enable Transaction Annotation -->
     <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- ================================================================ -->
+    <!-- Apache CXF Configuration -->
+    <!-- ================================================================ -->
+    <!-- CXF Bus -->
+    <bean id="cxf" class="org.apache.cxf.bus.spring.SpringBus" destroy-method="shutdown"/>
+
+    <!-- JAX-RS Server (REST API) -->
+    <bean id="restApiServer" class="org.apache.cxf.jaxrs.JAXRSServerFactoryBean" init-method="create">
+        <property name="address" value="/"/>
+        <property name="serviceBeans">
+            <list>
+                <ref bean="cultureFacilityRestService"/>
+            </list>
+        </property>
+        <property name="providers">
+            <list>
+                <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider"/>
+            </list>
+        </property>
+    </bean>
 
 </beans>
