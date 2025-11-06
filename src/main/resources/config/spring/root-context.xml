@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-4.3.xsd
+           http://www.springframework.org/schema/tx
+           http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+    <!-- ================================================================ -->
+    <!-- Component Scan -->
+    <!-- ================================================================ -->
+    <context:component-scan base-package="iros.test">
+        <context:exclude-filter type="annotation"
+                                expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation"
+                                expression="org.springframework.web.bind.annotation.RestController"/>
+    </context:component-scan>
+
+    <!-- ================================================================ -->
+    <!-- Property Placeholder -->
+    <!-- ================================================================ -->
+    <context:property-placeholder location="classpath:config/application.properties"
+                                  ignore-resource-not-found="true"/>
+
+    <!-- ================================================================ -->
+    <!-- DataSource Configuration (HikariCP) -->
+    <!-- ================================================================ -->
+    <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+        <property name="driverClassName" value="${db.driver}"/>
+        <property name="jdbcUrl" value="${db.url}"/>
+        <property name="username" value="${db.username}"/>
+        <property name="password" value="${db.password}"/>
+        <property name="maximumPoolSize" value="${db.pool.max:10}"/>
+        <property name="minimumIdle" value="${db.pool.min:2}"/>
+        <property name="connectionTimeout" value="30000"/>
+        <property name="idleTimeout" value="600000"/>
+        <property name="maxLifetime" value="1800000"/>
+    </bean>
+
+    <!-- ================================================================ -->
+    <!-- MyBatis Configuration -->
+    <!-- ================================================================ -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:config/mybatis/mybatis-config.xml"/>
+        <property name="mapperLocations" value="classpath:mybatis/mapper/**/*.xml"/>
+    </bean>
+
+    <bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg ref="sqlSessionFactory"/>
+    </bean>
+
+    <!-- MyBatis Mapper Scan -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="iros.test.**.dao"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+    <!-- ================================================================ -->
+    <!-- Transaction Manager -->
+    <!-- ================================================================ -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- Enable Transaction Annotation -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+</beans>

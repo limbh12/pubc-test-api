@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <!-- ================================================================ -->
+    <!-- Settings -->
+    <!-- ================================================================ -->
+    <settings>
+        <!-- CamelCase Mapping -->
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+
+        <!-- Cache Configuration -->
+        <setting name="cacheEnabled" value="true"/>
+        <setting name="lazyLoadingEnabled" value="false"/>
+        <setting name="aggressiveLazyLoading" value="false"/>
+
+        <!-- Multiple ResultSets -->
+        <setting name="multipleResultSetsEnabled" value="true"/>
+
+        <!-- Generated Keys -->
+        <setting name="useGeneratedKeys" value="false"/>
+
+        <!-- Column Mapping -->
+        <setting name="useColumnLabel" value="true"/>
+
+        <!-- Logging -->
+        <setting name="logImpl" value="SLF4J"/>
+
+        <!-- JDBC Type for Null -->
+        <setting name="jdbcTypeForNull" value="NULL"/>
+    </settings>
+
+    <!-- ================================================================ -->
+    <!-- Type Aliases -->
+    <!-- ================================================================ -->
+    <typeAliases>
+        <!-- Common -->
+        <typeAlias alias="HashMap" type="java.util.HashMap"/>
+        <typeAlias alias="Map" type="java.util.Map"/>
+        <typeAlias alias="List" type="java.util.List"/>
+
+        <!-- Domain Objects -->
+        <typeAlias alias="CultureFacilityVO" type="iros.test.facility.domain.CultureFacilityVO"/>
+        <typeAlias alias="UserCrtfcVO" type="iros.test.user.domain.UserCrtfcVO"/>
+    </typeAliases>
+
+    <!-- ================================================================ -->
+    <!-- Type Handlers -->
+    <!-- ================================================================ -->
+    <typeHandlers>
+        <!-- Custom Type Handlers can be added here -->
+    </typeHandlers>
+
+</configuration>
