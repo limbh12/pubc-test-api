@@ -148,3 +148,35 @@ credentials/
 generated/
 generated-sources/
 generated-test-sources/
+
+###############################################################################
+# Local Development Environment (프로젝트 내 독립 환경)
+###############################################################################
+
+# JDK 로컬 설치 (env/jdk/)
+env/jdk/
+!env/jdk/.gitkeep
+
+# JBoss/WildFly 로컬 설치 (env/jboss/)
+env/jboss/
+!env/jboss/.gitkeep
+
+# 임시 다운로드 디렉토리
+env/.tmp/
+
+# JBoss 런타임 데이터
+env/jboss/standalone/data/
+env/jboss/standalone/log/
+env/jboss/standalone/tmp/
+env/jboss/domain/data/
+env/jboss/domain/log/
+env/jboss/domain/tmp/
+
+# 로그 파일
+logs/
+*.log
+
+# 프로젝트 빌드 산출물
+deployments/
+*.war
+*.ear
