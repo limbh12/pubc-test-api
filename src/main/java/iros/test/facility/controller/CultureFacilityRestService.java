@@ -1,5 +1,6 @@
 package iros.test.facility.controller;
 
+import iros.test.common.exception.ResourceNotFoundException;
 import iros.test.facility.domain.CultureFacilityVO;
 import iros.test.facility.service.CultureFacilityService;
 import iros.test.user.domain.UserCrtfcVO;
@@ -139,6 +140,15 @@ public class CultureFacilityRestService {
             mockCommonProc.insertPubcLog(request, userCrtfc, responseData);
 
             return Response.ok(responseData).build();
+
+        } catch (ResourceNotFoundException e) {
+            logger.warn("리소스를 찾을 수 없음: {}", e.getMessage());
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("resultCode", "04");
+            errorResponse.put("resultMessage", e.getMessage());
+
+            return Response.status(Response.Status.NOT_FOUND).entity(errorResponse).build();
 
         } catch (IllegalArgumentException e) {
             logger.error("잘못된 요청: {}", e.getMessage());

@@ -141,6 +141,68 @@ JBoss는 다음 마커 파일로 배포 상태를 표시합니다:
 
 ## 4. 서버 시작 및 확인
 
+### 4.0 주요 경로 정보
+
+서버 실행 후 생성되는 주요 파일 및 디렉토리 경로입니다:
+
+#### 로그 파일 경로
+```
+📋 /Users/byunglim/Prj_Claude/PubcTestApi/logs/server.log
+```
+- **설정 위치**: `env/jboss/wildfly-26.1.3.Final/standalone/configuration/logging.properties`
+- **로그 로테이션**: 날짜별 (`.yyyy-MM-dd` suffix)
+- **로그 레벨**: ALL (모든 레벨 로깅)
+
+**로그 설정**:
+```properties
+handler.FILE.fileName=/Users/byunglim/Prj_Claude/PubcTestApi/logs/server.log
+handler.FILE.suffix=.yyyy-MM-dd
+handler.FILE.level=ALL
+```
+
+#### WAR 배포 및 압축 해제 경로
+
+1. **원본 WAR 파일**:
+   ```
+   env/jboss/wildfly-26.1.3.Final/standalone/deployments/pubc-test-api.war
+   ```
+   - 배포 마커: `pubc-test-api.war.deployed` (배포 성공 시 생성)
+
+2. **실제 배포 컨텐츠** (해시 기반 내부 저장소):
+   ```
+   env/jboss/wildfly-26.1.3.Final/standalone/data/content/27/43b0549905a3569f297e7cf9798ad3185a102d/content
+   ```
+   - JBoss가 내부적으로 VFS(Virtual File System)를 통해 접근
+   - WAR 파일의 SHA-1 해시를 기반으로 경로 생성
+
+3. **임시 컴파일 파일**:
+   ```
+   env/jboss/wildfly-26.1.3.Final/standalone/tmp/pubc-test-api.war/
+   ```
+   - JSP 컴파일 결과 저장 (`org/apache/jsp/`)
+
+#### 디렉토리 구조 요약
+
+```
+env/jboss/wildfly-26.1.3.Final/standalone/
+├── deployments/                          # WAR 파일 배포 위치
+│   ├── pubc-test-api.war                # 원본 WAR (23MB)
+│   └── pubc-test-api.war.deployed       # 배포 성공 마커
+│
+├── data/content/                         # 실제 배포 컨텐츠
+│   └── 27/43b0549905.../content         # WAR 압축본 (해시 기반)
+│
+├── tmp/                                  # 임시 파일
+│   └── pubc-test-api.war/               # JSP 컴파일 결과
+│
+└── configuration/
+    └── logging.properties               # 로그 설정
+
+/Users/byunglim/Prj_Claude/PubcTestApi/logs/
+└── server.log                           # 서버 로그 (프로젝트 루트)
+└── server.log.2025-11-13                # 과거 로그 (날짜별)
+```
+
 ### 4.1 JBoss 서버 시작
 
 ```bash
@@ -180,11 +242,30 @@ JBoss 홈: /Users/byunglim/Prj_Claude/PubcTestApi/env/jboss/wildfly-26.1.3.Final
 
 **터미널에서 로그 확인**:
 ```bash
-# 실시간 로그 모니터링 (별도 터미널)
+# 실시간 로그 모니터링 (프로젝트 루트의 logs/)
 tail -f logs/server.log
 
-# 또는 env/jboss/wildfly-26.1.3.Final/standalone/log/server.log
+# 또는 JBoss standalone 로그 (동일한 내용)
 tail -f env/jboss/wildfly-26.1.3.Final/standalone/log/server.log
+
+# 최근 100줄만 보기
+tail -n 100 logs/server.log
+
+# 에러만 필터링
+grep -i "error\|exception" logs/server.log
+
+# 특정 패턴 검색 (예: Spring 초기화)
+grep "Root WebApplicationContext" logs/server.log
+```
+
+**배포 마커 파일 확인**:
+```bash
+# 배포 상태 확인
+ls -lh env/jboss/wildfly-26.1.3.Final/standalone/deployments/pubc-test-api.war*
+
+# 예상 출력:
+# -rw-r--r--  23M  pubc-test-api.war
+# -rw-r--r--  17B  pubc-test-api.war.deployed  ✅ (배포 성공)
 ```
 
 **배포 성공 로그 예시**:
@@ -224,6 +305,11 @@ Content-Type: text/html
 - `DEMO_KEY`
 - `DEV_KEY`
 
+**중요 사항**:
+- ⚠️ **한글 파라미터는 반드시 URL 인코딩 필요**
+- 권장: `curl -G` + `--data-urlencode` 옵션 사용
+- 인코딩 없이 전송 시 HTTP 400 에러 발생 및 로그 미기록
+
 ### 5.2 REST API 테스트
 
 #### 5.2.1 헬스 체크
@@ -245,8 +331,18 @@ curl -X GET "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_
 
 **시설 유형별 조회 (박물관)**:
 ```bash
-curl -X GET "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001&facilityType=박물관"
+# 방법 1: --data-urlencode 사용 (권장)
+curl -G "http://localhost:8080/pubc-test-api/api/facilities" \
+  --data-urlencode "serviceKey=TEST_KEY_001" \
+  --data-urlencode "facilityType=박물관" \
+  --data-urlencode "pageSize=10"
+
+# 방법 2: 수동 URL 인코딩
+curl "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001&facilityType=%eb%b0%95%eb%ac%bc%ea%b4%80"
 ```
+
+> **⚠️ 중요**: 한글 파라미터는 반드시 URL 인코딩이 필요합니다!  
+> 인코딩 없이 전송하면 HTTP 400 에러가 발생하며 로그도 기록되지 않습니다.
 
 **지역별 조회 (서울)**:
 ```bash
@@ -260,7 +356,11 @@ curl -X GET "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_
 
 **JSON 포맷팅 (jq 사용)**:
 ```bash
-curl -s -X GET "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001&pageSize=5" | jq '.'
+# 한글 파라미터는 --data-urlencode 사용
+curl -s -G "http://localhost:8080/pubc-test-api/api/facilities" \
+  --data-urlencode "serviceKey=TEST_KEY_001" \
+  --data-urlencode "facilityType=미술관" \
+  --data-urlencode "pageSize=5" | jq '.'
 ```
 
 **예상 응답**:
@@ -417,7 +517,10 @@ echo ""
 
 # 3. 시설 유형별 조회
 echo "3. 시설 유형별 조회 (박물관)..."
-curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&facilityType=박물관&pageSize=3" | jq '.totalCount'
+curl -s -G "${BASE_URL}/facilities" \
+  --data-urlencode "serviceKey=${SERVICE_KEY}" \
+  --data-urlencode "facilityType=박물관" \
+  --data-urlencode "pageSize=3" | jq '.totalCount'
 echo ""
 
 # 4. 지역별 조회
@@ -596,11 +699,27 @@ grep "Root WebApplicationContext" env/jboss/wildfly-26.1.3.Final/standalone/log/
 # MockCommonProc.java에 정의된 키 확인
 grep "TEST_KEY" src/main/java/iros/test/user/mock/MockCommonProc.java
 
-# 2. URL 인코딩 확인
-curl -X GET "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001"
+# 2. URL 인코딩 확인 (한글 파라미터)
+curl -G "http://localhost:8080/pubc-test-api/api/facilities" \
+  --data-urlencode "serviceKey=TEST_KEY_001" \
+  --data-urlencode "facilityType=박물관"
 
 # 3. 로그에서 인증 실패 원인 확인
 tail -50 logs/server.log | grep -i auth
+```
+
+**한글 파라미터 처리 문제**:
+```bash
+# ❌ 잘못된 방법 (HTTP 400 에러, 로그 미기록)
+curl "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001&facilityType=박물관"
+
+# ✅ 올바른 방법 1: --data-urlencode 사용
+curl -G "http://localhost:8080/pubc-test-api/api/facilities" \
+  --data-urlencode "serviceKey=TEST_KEY_001" \
+  --data-urlencode "facilityType=박물관"
+
+# ✅ 올바른 방법 2: 수동 URL 인코딩
+curl "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001&facilityType=%eb%b0%95%eb%ac%bc%ea%b4%80"
 ```
 
 ### 6.5 성능 문제
@@ -626,10 +745,10 @@ export JAVA_OPTS="$JAVA_OPTS -verbose:gc -Xloggc:$PROJECT_ROOT/logs/gc.log"
 ### 6.6 로그 확인 방법
 
 ```bash
-# 애플리케이션 로그
+# 애플리케이션 로그 (프로젝트 루트)
 tail -f logs/server.log
 
-# JBoss 서버 로그
+# JBoss 서버 로그 (동일한 내용)
 tail -f env/jboss/wildfly-26.1.3.Final/standalone/log/server.log
 
 # 특정 패턴 검색
@@ -637,6 +756,33 @@ grep -i "error\|exception" logs/server.log
 
 # 최근 30분 로그만
 find logs/ -name "*.log" -mmin -30 -exec tail -100 {} \;
+
+# 날짜별 로그 확인
+ls -lh logs/server.log*
+# server.log              # 현재 로그
+# server.log.2025-11-13   # 과거 로그 (날짜별)
+```
+
+**로그 레벨 조정** (`env/jboss/wildfly-26.1.3.Final/standalone/configuration/logging.properties`):
+```properties
+# 전체 로그 레벨 변경
+logger.level=INFO    # DEBUG, INFO, WARN, ERROR
+
+# 특정 패키지 로그 레벨
+logger.iros.test.level=DEBUG
+logger.iros.test.handlers=FILE,CONSOLE
+```
+
+**배포 관련 파일 확인**:
+```bash
+# 배포 디렉토리
+ls -lh env/jboss/wildfly-26.1.3.Final/standalone/deployments/
+
+# 실제 배포 컨텐츠 (내부 저장소)
+ls -lh env/jboss/wildfly-26.1.3.Final/standalone/data/content/27/*/content
+
+# JSP 컴파일 결과
+ls -lh env/jboss/wildfly-26.1.3.Final/standalone/tmp/pubc-test-api.war/
 ```
 
 ---
@@ -704,10 +850,22 @@ watch -n 1 'ls -lt env/jboss/wildfly-26.1.3.Final/standalone/deployments/'
 | 서버 시작 | `./bin/jboss-start.sh` |
 | 서버 종료 | `./bin/jboss-stop.sh` |
 | 로그 확인 | `tail -f logs/server.log` |
+| 배포 상태 | `ls -lh env/jboss/wildfly-26.1.3.Final/standalone/deployments/pubc-test-api.war*` |
 | 통합 테스트 | `./scripts/test-api.sh` |
 | API 테스트 | `curl "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001"` |
 
-### 8.2 주요 URL
+### 8.2 주요 경로
+
+| 항목 | 경로 |
+|------|------|
+| 로그 파일 | `logs/server.log` |
+| 날짜별 로그 | `logs/server.log.yyyy-MM-dd` |
+| 배포 디렉토리 | `env/jboss/wildfly-26.1.3.Final/standalone/deployments/` |
+| 배포 컨텐츠 | `env/jboss/wildfly-26.1.3.Final/standalone/data/content/` |
+| 임시 파일 | `env/jboss/wildfly-26.1.3.Final/standalone/tmp/` |
+| 로그 설정 | `env/jboss/wildfly-26.1.3.Final/standalone/configuration/logging.properties` |
+
+### 8.3 주요 URL
 
 | 항목 | URL |
 |------|-----|

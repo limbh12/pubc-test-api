@@ -57,8 +57,8 @@ echo -e "${BLUE}2. 문화시설 목록 조회 (전체, 페이지 크기: 5)${NC}
 RESPONSE=$(curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&pageSize=5")
 if [ "$USE_JQ" = true ]; then
     TOTAL=$(echo "$RESPONSE" | jq -r '.totalCount // "N/A"')
-    FIRST_NAME=$(echo "$RESPONSE" | jq -r '.items[0].facilityName // "N/A"')
-    CODE=$(echo "$RESPONSE" | jq -r '.code // "N/A"')
+    FIRST_NAME=$(echo "$RESPONSE" | jq -r '.data[0].facilityName // "N/A"')
+    CODE=$(echo "$RESPONSE" | jq -r '.resultCode // "N/A"')
     echo "   응답 코드: $CODE"
     echo "   총 시설 수: $TOTAL"
     echo "   첫 번째 시설: $FIRST_NAME"
@@ -69,14 +69,17 @@ echo ""
 
 # 3. 시설 유형별 조회 (박물관)
 echo -e "${BLUE}3. 시설 유형별 조회 (박물관, 페이지 크기: 3)${NC}"
-RESPONSE=$(curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&facilityType=박물관&pageSize=3")
+RESPONSE=$(curl -s -G "${BASE_URL}/facilities" \
+  --data-urlencode "serviceKey=${SERVICE_KEY}" \
+  --data-urlencode "facilityType=박물관" \
+  --data-urlencode "pageSize=3")
 if [ "$USE_JQ" = true ]; then
     TOTAL=$(echo "$RESPONSE" | jq -r '.totalCount // "N/A"')
-    COUNT=$(echo "$RESPONSE" | jq -r '.items | length')
+    COUNT=$(echo "$RESPONSE" | jq -r '.data | length')
     echo "   박물관 총 수: $TOTAL"
     echo "   조회된 수: $COUNT"
     echo "   시설 목록:"
-    echo "$RESPONSE" | jq -r '.items[].facilityName' | while read name; do
+    echo "$RESPONSE" | jq -r '.data[].facilityName' | while read name; do
         echo "     - $name"
     done
 else
@@ -89,11 +92,11 @@ echo -e "${BLUE}4. 지역별 조회 (서울, 지역코드: 11)${NC}"
 RESPONSE=$(curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&regionCode=11&pageSize=3")
 if [ "$USE_JQ" = true ]; then
     TOTAL=$(echo "$RESPONSE" | jq -r '.totalCount // "N/A"')
-    COUNT=$(echo "$RESPONSE" | jq -r '.items | length')
+    COUNT=$(echo "$RESPONSE" | jq -r '.data | length')
     echo "   서울 시설 총 수: $TOTAL"
     echo "   조회된 수: $COUNT"
     echo "   시설 목록:"
-    echo "$RESPONSE" | jq -r '.items[] | "     - \(.facilityName) (\(.facilityType))"'
+    echo "$RESPONSE" | jq -r '.data[] | "     - \(.facilityName) (\(.facilityType))"'
 else
     echo "$RESPONSE" | head -20
 fi
@@ -101,26 +104,30 @@ echo ""
 
 # 5. 복합 조건 조회 (서울 + 박물관)
 echo -e "${BLUE}5. 복합 조건 조회 (서울 + 박물관)${NC}"
-RESPONSE=$(curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&regionCode=11&facilityType=박물관&pageSize=3")
+RESPONSE=$(curl -s -G "${BASE_URL}/facilities" \
+  --data-urlencode "serviceKey=${SERVICE_KEY}" \
+  --data-urlencode "regionCode=11" \
+  --data-urlencode "facilityType=박물관" \
+  --data-urlencode "pageSize=3")
 if [ "$USE_JQ" = true ]; then
     TOTAL=$(echo "$RESPONSE" | jq -r '.totalCount // "N/A"')
     echo "   서울 박물관 수: $TOTAL"
     echo "   시설 목록:"
-    echo "$RESPONSE" | jq -r '.items[] | "     - \(.facilityName) (\(.address))"'
+    echo "$RESPONSE" | jq -r '.data[] | "     - \(.facilityName) (\(.address))"'
 else
     echo "$RESPONSE" | head -20
 fi
 echo ""
 
 # 6. 문화시설 상세 조회
-echo -e "${BLUE}6. 문화시설 상세 조회 (FAC001)${NC}"
-RESPONSE=$(curl -s "${BASE_URL}/facilities/FAC001?serviceKey=${SERVICE_KEY}")
+echo -e "${BLUE}6. 문화시설 상세 조회 (F001)${NC}"
+RESPONSE=$(curl -s "${BASE_URL}/facilities/F001?serviceKey=${SERVICE_KEY}")
 if [ "$USE_JQ" = true ]; then
-    NAME=$(echo "$RESPONSE" | jq -r '.facilityName // "N/A"')
-    TYPE=$(echo "$RESPONSE" | jq -r '.facilityType // "N/A"')
-    ADDRESS=$(echo "$RESPONSE" | jq -r '.address // "N/A"')
-    PHONE=$(echo "$RESPONSE" | jq -r '.phone // "N/A"')
-    HOMEPAGE=$(echo "$RESPONSE" | jq -r '.homepage // "N/A"')
+    NAME=$(echo "$RESPONSE" | jq -r '.data.facilityName // "N/A"')
+    TYPE=$(echo "$RESPONSE" | jq -r '.data.facilityType // "N/A"')
+    ADDRESS=$(echo "$RESPONSE" | jq -r '.data.address // "N/A"')
+    PHONE=$(echo "$RESPONSE" | jq -r '.data.phoneNumber // "N/A"')
+    HOMEPAGE=$(echo "$RESPONSE" | jq -r '.data.website // "N/A"')
     echo "   시설명: $NAME"
     echo "   유형: $TYPE"
     echo "   주소: $ADDRESS"
@@ -136,7 +143,7 @@ echo -e "${BLUE}7. 시설 유형 목록 조회${NC}"
 RESPONSE=$(curl -s "${BASE_URL}/facilities/types?serviceKey=${SERVICE_KEY}")
 if [ "$USE_JQ" = true ]; then
     echo "   지원 시설 유형:"
-    echo "$RESPONSE" | jq -r '.types[] | "     - \(.name): \(.count)개"'
+    echo "$RESPONSE" | jq -r '.data[] | "     - \(.)"'
 else
     echo "$RESPONSE"
 fi
@@ -147,7 +154,7 @@ echo -e "${BLUE}8. 페이징 테스트${NC}"
 echo "   페이지 1 (크기: 5):"
 RESPONSE=$(curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&pageNum=1&pageSize=5")
 if [ "$USE_JQ" = true ]; then
-    echo "$RESPONSE" | jq -r '.items[] | "     \(.facilityId): \(.facilityName)"'
+    echo "$RESPONSE" | jq -r '.data[] | "     \(.facilityId): \(.facilityName)"'
 else
     echo "$RESPONSE" | head -10
 fi
@@ -155,7 +162,7 @@ fi
 echo "   페이지 2 (크기: 5):"
 RESPONSE=$(curl -s "${BASE_URL}/facilities?serviceKey=${SERVICE_KEY}&pageNum=2&pageSize=5")
 if [ "$USE_JQ" = true ]; then
-    echo "$RESPONSE" | jq -r '.items[] | "     \(.facilityId): \(.facilityName)"'
+    echo "$RESPONSE" | jq -r '.data[] | "     \(.facilityId): \(.facilityName)"'
 else
     echo "$RESPONSE" | head -10
 fi

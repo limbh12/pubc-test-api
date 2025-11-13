@@ -1,5 +1,6 @@
 package iros.test.facility.service;
 
+import iros.test.common.exception.ResourceNotFoundException;
 import iros.test.facility.dao.CultureFacilityMapper;
 import iros.test.facility.domain.CultureFacilityVO;
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ public class CultureFacilityServiceImpl implements CultureFacilityService {
 
         if (facility == null) {
             logger.warn("문화시설을 찾을 수 없습니다 - facilityId: {}", facilityId);
-            throw new IllegalArgumentException("해당 시설을 찾을 수 없습니다: " + facilityId);
+            throw new ResourceNotFoundException("해당 시설을 찾을 수 없습니다: " + facilityId);
         }
 
         logger.info("문화시설 상세 조회 완료 - facilityId: {}, name: {}",
