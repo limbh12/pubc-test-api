@@ -11,10 +11,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 JDK_DIR="$PROJECT_ROOT/env/jdk"
-JDK_VERSION="8u422"
+JDK_VERSION="8.0.472"
+ZULU_VERSION="8.90.0.19"
 
 echo "=========================================="
-echo "JDK 1.8 로컬 설치 시작"
+echo "JDK 1.8 로컬 설치 시작 (Azul Zulu)"
 echo "=========================================="
 echo "프로젝트 루트: $PROJECT_ROOT"
 echo "JDK 설치 경로: $JDK_DIR"
@@ -29,17 +30,20 @@ case "$OS_TYPE" in
         if [ "$ARCH" = "arm64" ]; then
             echo "Apple Silicon (M1/M2) 감지"
             JDK_ARCH="aarch64"
-            JDK_FILE="OpenJDK8U-jdk_aarch64_mac_hotspot_${JDK_VERSION}.tar.gz"
+            JDK_FILE="zulu${ZULU_VERSION}-ca-jdk${JDK_VERSION}-macosx_aarch64.tar.gz"
+            JDK_URL="https://cdn.azul.com/zulu/bin/${JDK_FILE}"
         else
             echo "Intel Mac 감지"
             JDK_ARCH="x64"
-            JDK_FILE="OpenJDK8U-jdk_x64_mac_hotspot_${JDK_VERSION}.tar.gz"
+            JDK_FILE="zulu${ZULU_VERSION}-ca-jdk${JDK_VERSION}-macosx_x64.tar.gz"
+            JDK_URL="https://cdn.azul.com/zulu/bin/${JDK_FILE}"
         fi
         ;;
     Linux*)
         OS="linux"
         JDK_ARCH="x64"
-        JDK_FILE="OpenJDK8U-jdk_x64_linux_hotspot_${JDK_VERSION}.tar.gz"
+        JDK_FILE="zulu${ZULU_VERSION}-ca-jdk${JDK_VERSION}-linux_x64.tar.gz"
+        JDK_URL="https://cdn.azul.com/zulu/bin/${JDK_FILE}"
         ;;
     *)
         echo "지원하지 않는 OS: $OS_TYPE"
@@ -51,20 +55,19 @@ echo "운영체제: $OS"
 echo "아키텍처: $JDK_ARCH"
 echo ""
 
-# 이미 설치되어 있는지 확인
-if [ -d "$JDK_DIR/jdk8u422-b05" ] || [ -d "$JDK_DIR/jdk1.8.0_422" ]; then
+# 이미 설치되어 있는지 확인 (Zulu 디렉토리 패턴)
+if [ -d "$JDK_DIR/zulu${ZULU_VERSION}-ca-jdk${JDK_VERSION}"* ] || \
+   [ -d "$JDK_DIR/jdk8u"* ] || \
+   [ -d "$JDK_DIR/jdk1.8.0"* ]; then
     echo "JDK가 이미 설치되어 있습니다."
 
     # JAVA_HOME 찾기
-    if [ -d "$JDK_DIR/jdk8u422-b05" ]; then
-        JAVA_HOME_PATH="$JDK_DIR/jdk8u422-b05"
-    else
-        JAVA_HOME_PATH="$JDK_DIR/jdk1.8.0_422"
-    fi
+    JAVA_HOME_PATH=$(find "$JDK_DIR" -mindepth 1 -maxdepth 1 -type d \( -name "zulu*" -o -name "jdk8u*" -o -name "jdk1.8.0*" \) | head -n 1)
 
-    if [ -f "$JAVA_HOME_PATH/bin/java" ]; then
+    if [ -n "$JAVA_HOME_PATH" ] && [ -f "$JAVA_HOME_PATH/bin/java" ]; then
         JAVA_VERSION=$("$JAVA_HOME_PATH/bin/java" -version 2>&1 | head -n 1)
         echo "설치된 버전: $JAVA_VERSION"
+        echo "설치 경로: $JAVA_HOME_PATH"
         echo ""
         echo "재설치하려면 먼저 다음 명령어로 삭제하세요:"
         echo "  rm -rf $JDK_DIR/*"
@@ -72,11 +75,11 @@ if [ -d "$JDK_DIR/jdk8u422-b05" ] || [ -d "$JDK_DIR/jdk1.8.0_422" ]; then
     fi
 fi
 
-# JDK 다운로드 URL (Adoptium Eclipse Temurin)
-JDK_URL="https://github.com/adoptium/temurin8-binaries/releases/download/jdk${JDK_VERSION}-b05/${JDK_FILE}"
+# JDK 다운로드 URL (Azul Zulu)
+echo "다운로드 URL: $JDK_URL"
 
+echo ""
 echo "JDK 다운로드 중..."
-echo "URL: $JDK_URL"
 echo ""
 
 # 임시 디렉토리 생성
@@ -100,23 +103,19 @@ echo "JDK 압축 해제 중..."
 # 압축 해제
 tar -xzf "$JDK_FILE" -C "$JDK_DIR"
 
+# 원래 디렉토리로 돌아가기
+cd "$PROJECT_ROOT"
+
 # 정리
 rm -rf "$TEMP_DIR"
 
 echo ""
 echo "=========================================="
-echo "JDK 1.8 설치 완료!"
+echo "Azul Zulu JDK 1.8 설치 완료!"
 echo "=========================================="
 
-# JAVA_HOME 경로 찾기
-if [ -d "$JDK_DIR/jdk8u422-b05" ]; then
-    JAVA_HOME_PATH="$JDK_DIR/jdk8u422-b05"
-elif [ -d "$JDK_DIR/jdk1.8.0_422" ]; then
-    JAVA_HOME_PATH="$JDK_DIR/jdk1.8.0_422"
-else
-    # 첫 번째 jdk* 디렉토리 찾기
-    JAVA_HOME_PATH=$(find "$JDK_DIR" -maxdepth 1 -type d -name "jdk*" | head -n 1)
-fi
+# JAVA_HOME 경로 찾기 (Zulu 디렉토리 패턴)
+JAVA_HOME_PATH=$(find "$JDK_DIR" -mindepth 1 -maxdepth 1 -type d \( -name "zulu*" -o -name "jdk*" \) | head -n 1)
 
 if [ -n "$JAVA_HOME_PATH" ] && [ -f "$JAVA_HOME_PATH/bin/java" ]; then
     echo "설치 경로: $JAVA_HOME_PATH"

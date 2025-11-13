@@ -22,13 +22,9 @@ echo ""
 
 # JDK 확인
 JAVA_HOME_LOCAL="$PROJECT_ROOT/env/jdk"
-if [ -d "$JAVA_HOME_LOCAL/jdk8u422-b05" ]; then
-    JAVA_HOME_PATH="$JAVA_HOME_LOCAL/jdk8u422-b05"
-elif [ -d "$JAVA_HOME_LOCAL/jdk1.8.0_422" ]; then
-    JAVA_HOME_PATH="$JAVA_HOME_LOCAL/jdk1.8.0_422"
-else
-    JAVA_HOME_PATH=$(find "$JAVA_HOME_LOCAL" -maxdepth 1 -type d -name "jdk*" | head -n 1)
-fi
+
+# JDK 경로 찾기 (Zulu 및 기타 JDK 패턴 지원)
+JAVA_HOME_PATH=$(find "$JAVA_HOME_LOCAL" -mindepth 1 -maxdepth 1 -type d \( -name "zulu*" -o -name "jdk*" \) 2>/dev/null | head -n 1)
 
 if [ -z "$JAVA_HOME_PATH" ] || [ ! -f "$JAVA_HOME_PATH/bin/java" ]; then
     echo "오류: 로컬 JDK를 찾을 수 없습니다."
@@ -43,12 +39,28 @@ echo "Java 버전: $JAVA_VERSION"
 echo ""
 
 # 이미 설치되어 있는지 확인
-if [ -d "$JBOSS_DIR/jboss-eap-7.4" ]; then
-    echo "JBoss EAP가 이미 설치되어 있습니다."
-    echo "설치 경로: $JBOSS_DIR/jboss-eap-7.4"
+EXISTING_WILDFLY=$(find "$JBOSS_DIR" -mindepth 1 -maxdepth 1 -type d -name "wildfly-*" 2>/dev/null | head -n 1)
+
+if [ -d "$JBOSS_DIR/jboss-eap-7.4" ] || [ -n "$EXISTING_WILDFLY" ]; then
+    echo "JBoss/WildFly가 이미 설치되어 있습니다."
+    
+    if [ -n "$EXISTING_WILDFLY" ]; then
+        echo "설치 경로: $EXISTING_WILDFLY"
+        
+        # 심볼릭 링크가 없으면 생성
+        if [ ! -e "$JBOSS_DIR/jboss-eap-7.4" ]; then
+            echo ""
+            echo "심볼릭 링크 생성 중..."
+            ln -sf "$EXISTING_WILDFLY" "$JBOSS_DIR/jboss-eap-7.4"
+            echo "심볼릭 링크: $JBOSS_DIR/jboss-eap-7.4 → $(basename $EXISTING_WILDFLY)"
+        fi
+    else
+        echo "설치 경로: $JBOSS_DIR/jboss-eap-7.4"
+    fi
+    
     echo ""
     echo "재설치하려면 먼저 다음 명령어로 삭제하세요:"
-    echo "  rm -rf $JBOSS_DIR/*"
+    echo "  rm -rf $JBOSS_DIR/wildfly-* $JBOSS_DIR/jboss-eap-*"
     exit 0
 fi
 
@@ -102,10 +114,14 @@ case $choice in
         echo "WildFly 압축 해제 중..."
         tar -xzf "$WILDFLY_FILE" -C "$JBOSS_DIR"
 
+        # 원래 디렉토리로 돌아가기
+        cd "$PROJECT_ROOT"
+
+        # 임시 디렉토리 정리
+        rm -rf "$TEMP_DIR"
+
         # 심볼릭 링크 생성 (jboss-eap-7.4 → wildfly-26.x)
         ln -sf "$JBOSS_DIR/wildfly-${WILDFLY_VERSION}" "$JBOSS_DIR/jboss-eap-7.4"
-
-        rm -rf "$TEMP_DIR"
 
         echo ""
         echo "=========================================="

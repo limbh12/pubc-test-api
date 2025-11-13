@@ -1,0 +1,520 @@
+{
+  "info": {
+    "name": "PUBC Test API",
+    "description": "PUBC 연동 테스트 API - 문화시설 정보 조회",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "1"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/pubc-test-api/api",
+      "type": "string"
+    },
+    {
+      "key": "serviceKey",
+      "value": "TEST_KEY_001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "문화시설 API",
+      "item": [
+        {
+          "name": "1. 문화시설 목록 조회 (전체)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&pageNum=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}",
+                  "description": "서비스 인증 키"
+                },
+                {
+                  "key": "pageNum",
+                  "value": "1",
+                  "description": "페이지 번호 (1부터 시작)"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10",
+                  "description": "페이지당 항목 수"
+                }
+              ]
+            },
+            "description": "전체 문화시설 목록을 페이징하여 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "2. 문화시설 목록 조회 (박물관)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&facilityType=박물관&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "facilityType",
+                  "value": "박물관",
+                  "description": "시설 유형 (박물관/미술관/도서관)"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "특정 유형의 문화시설 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "3. 문화시설 목록 조회 (미술관)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&facilityType=미술관&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "facilityType",
+                  "value": "미술관"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "미술관 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "4. 문화시설 목록 조회 (도서관)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&facilityType=도서관&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "facilityType",
+                  "value": "도서관"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "도서관 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "5. 문화시설 목록 조회 (서울)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&regionCode=11&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "regionCode",
+                  "value": "11",
+                  "description": "지역 코드 (11:서울, 26:부산, 41:경기)"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "특정 지역의 문화시설 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "6. 문화시설 목록 조회 (부산)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&regionCode=26&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "regionCode",
+                  "value": "26"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "부산 지역의 문화시설 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "7. 문화시설 목록 조회 (서울+박물관)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&regionCode=11&facilityType=박물관&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "regionCode",
+                  "value": "11"
+                },
+                {
+                  "key": "facilityType",
+                  "value": "박물관"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "복합 조건으로 문화시설을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "8. 문화시설 상세 조회 (FAC001)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities/FAC001?serviceKey={{serviceKey}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities", "FAC001"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                }
+              ]
+            },
+            "description": "특정 문화시설의 상세 정보를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "9. 문화시설 상세 조회 (FAC002)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities/FAC002?serviceKey={{serviceKey}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities", "FAC002"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                }
+              ]
+            },
+            "description": "서울시립미술관 상세 정보를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "10. 시설 유형 목록 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities/types?serviceKey={{serviceKey}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities", "types"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                }
+              ]
+            },
+            "description": "지원되는 시설 유형 목록과 각 유형별 개수를 조회합니다."
+          },
+          "response": []
+        }
+      ],
+      "description": "문화시설 정보 조회 API 엔드포인트"
+    },
+    {
+      "name": "에러 케이스 테스트",
+      "item": [
+        {
+          "name": "1. 잘못된 서비스키",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey=INVALID_KEY&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "INVALID_KEY",
+                  "description": "유효하지 않은 서비스키"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "유효하지 않은 서비스키로 요청 시 401 에러가 반환됩니다."
+          },
+          "response": []
+        },
+        {
+          "name": "2. 서비스키 누락",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "서비스키 없이 요청 시 400 에러가 반환됩니다."
+          },
+          "response": []
+        },
+        {
+          "name": "3. 존재하지 않는 시설 ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities/INVALID_ID?serviceKey={{serviceKey}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities", "INVALID_ID"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                }
+              ]
+            },
+            "description": "존재하지 않는 시설 ID로 요청 시 404 에러가 반환됩니다."
+          },
+          "response": []
+        },
+        {
+          "name": "4. 잘못된 페이지 번호",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&pageNum=-1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "pageNum",
+                  "value": "-1",
+                  "description": "유효하지 않은 페이지 번호"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "음수 페이지 번호로 요청 시 400 에러가 반환됩니다."
+          },
+          "response": []
+        },
+        {
+          "name": "5. 잘못된 시설 유형",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey={{serviceKey}}&facilityType=존재하지않는유형&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "{{serviceKey}}"
+                },
+                {
+                  "key": "facilityType",
+                  "value": "존재하지않는유형",
+                  "description": "유효하지 않은 시설 유형"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "지원하지 않는 시설 유형으로 요청 시 빈 결과가 반환됩니다."
+          },
+          "response": []
+        }
+      ],
+      "description": "에러 케이스 테스트 컬렉션"
+    },
+    {
+      "name": "다양한 서비스키 테스트",
+      "item": [
+        {
+          "name": "TEST_KEY_001로 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey=TEST_KEY_001&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "TEST_KEY_001"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TEST_KEY_002로 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey=TEST_KEY_002&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "TEST_KEY_002"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DEMO_KEY로 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey=DEMO_KEY&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "DEMO_KEY"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DEV_KEY로 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facilities?serviceKey=DEV_KEY&pageSize=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["facilities"],
+              "query": [
+                {
+                  "key": "serviceKey",
+                  "value": "DEV_KEY"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "다양한 유효한 서비스키로 API를 테스트합니다."
+    }
+  ]
+}
