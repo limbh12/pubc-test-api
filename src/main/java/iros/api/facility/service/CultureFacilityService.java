@@ -1,6 +1,6 @@
-package iros.test.facility.service;
+package iros.api.facility.service;
 
-import iros.test.facility.domain.CultureFacilityVO;
+import iros.api.facility.domain.CultureFacilityVO;
 
 import java.util.List;
 import java.util.Map;

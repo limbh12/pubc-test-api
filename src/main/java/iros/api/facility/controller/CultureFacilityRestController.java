@@ -1,13 +1,14 @@
-package iros.test.facility.controller;
+package iros.api.facility.controller;
 
-import iros.test.common.exception.ResourceNotFoundException;
-import iros.test.facility.domain.CultureFacilityVO;
-import iros.test.facility.service.CultureFacilityService;
-import iros.test.user.domain.UserCrtfcVO;
-import iros.test.user.mock.MockCommonProc;
+import iros.api.common.exception.ResourceNotFoundException;
+import iros.api.facility.domain.CultureFacilityVO;
+import iros.api.facility.service.CultureFacilityService;
+import iros.api.pubc.domain.UserCrtfcVO;
+import iros.api.pubc.mock.MockCommonProc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
@@ -20,17 +21,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 문화시설 REST API Service (JAX-RS)
+ * 문화시설 REST API Controller (JAX-RS) - PUBC 표준형
+ *
+ * <p>표준 PUBC 인증/로깅 방식을 사용합니다 (Mock 기반).</p>
+ * 
+ * <p>배포 구분:</p>
+ * <ul>
+ *   <li>표준형: {@link CultureFacilityRestController} - MockCommonProc 사용, Profile=mock (기본값)</li>
+ *   <li>개선형: {@link CultureFacilityImprovedRestController} - PubcImprovedProcessor 사용, Profile=improved</li>
+ * </ul>
+ * 
+ * <p>동일한 URL (/api/facilities)을 사용하며, Spring Profile로 구현체를 전환합니다.</p>
  *
  * @author PUBC Test API
  * @version 1.0
+ * @see CultureFacilityImprovedRestController
  */
-@Component("cultureFacilityRestService")
+@Component("cultureFacilityRestController")
 @Path("/facilities")
 @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-public class CultureFacilityRestService {
+@Profile("mock")
+public class CultureFacilityRestController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CultureFacilityRestService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CultureFacilityRestController.class);
 
     @Autowired
     private CultureFacilityService cultureFacilityService;

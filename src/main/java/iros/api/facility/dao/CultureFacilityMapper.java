@@ -1,6 +1,6 @@
-package iros.test.facility.dao;
+package iros.api.facility.dao;
 
-import iros.test.facility.domain.CultureFacilityVO;
+import iros.api.facility.domain.CultureFacilityVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

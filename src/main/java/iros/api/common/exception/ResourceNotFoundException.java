@@ -1,4 +1,4 @@
-package iros.test.common.exception;
+package iros.api.common.exception;
 
 /**
  * 리소스를 찾을 수 없을 때 발생하는 예외

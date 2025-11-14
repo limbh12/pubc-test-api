@@ -1,9 +1,8 @@
-package iros.test.facility.mock;
+package iros.api.facility.mock;
 
-import iros.test.facility.dao.CultureFacilityMapper;
-import iros.test.facility.domain.CultureFacilityVO;
+import iros.api.facility.dao.CultureFacilityMapper;
+import iros.api.facility.domain.CultureFacilityVO;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;
@@ -11,13 +10,13 @@ import java.util.stream.Collectors;
 
 /**
  * 문화시설 Mock Mapper
- * Mock 프로파일에서 데이터베이스 없이 테스트할 수 있도록 Mock 데이터 제공
+ * 모든 프로파일에서 데이터베이스 없이 테스트할 수 있도록 Mock 데이터 제공
+ * (표준형/개선형 모두 동일한 데이터 소스 사용)
  *
  * @author PUBC Test API
  * @version 1.0
  */
 @Repository("cultureFacilityMockMapper")
-@Profile("mock")
 @Primary
 public class CultureFacilityMockMapper implements CultureFacilityMapper {
 

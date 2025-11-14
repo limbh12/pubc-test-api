@@ -16,11 +16,13 @@
         <param-value>classpath:config/spring/root-context.xml</param-value>
     </context-param>
 
-    <!-- Spring Profile -->
+    <!-- Spring Profile 초기화기 (application.properties에서 active profile을 읽어 적용) -->
     <context-param>
-        <param-name>spring.profiles.active</param-name>
-        <param-value>mock</param-value>
+        <param-name>contextInitializerClasses</param-name>
+        <param-value>iros.api.common.config.ProfileInitializer</param-value>
     </context-param>
+
+    <!-- Spring Profile: application.properties에서 관리 (ProfileInitializer 참조) -->
 
     <!-- ================================================================ -->
     <!-- Listeners -->

@@ -14,7 +14,7 @@
     <!-- ================================================================ -->
     <!-- Component Scan -->
     <!-- ================================================================ -->
-    <context:component-scan base-package="iros.test">
+    <context:component-scan base-package="iros.api">
         <context:exclude-filter type="annotation"
                                 expression="org.springframework.stereotype.Controller"/>
         <context:exclude-filter type="annotation"
@@ -60,7 +60,7 @@
     <!-- Note: Disabled when using mock profile. Mock mappers provided by @Repository beans instead. -->
     <!--
     <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-        <property name="basePackage" value="iros.test.**.dao"/>
+        <property name="basePackage" value="iros.api.**.dao"/>
         <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
     </bean>
     -->
@@ -81,19 +81,7 @@
     <!-- CXF Bus -->
     <bean id="cxf" class="org.apache.cxf.bus.spring.SpringBus" destroy-method="shutdown"/>
 
-    <!-- JAX-RS Server (REST API) -->
-    <bean id="restApiServer" class="org.apache.cxf.jaxrs.JAXRSServerFactoryBean" init-method="create">
-        <property name="address" value="/"/>
-        <property name="serviceBeans">
-            <list>
-                <ref bean="cultureFacilityRestService"/>
-            </list>
-        </property>
-        <property name="providers">
-            <list>
-                <bean class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider"/>
-            </list>
-        </property>
-    </bean>
+    <!-- JAX-RS Server는 Java Config (CxfConfig.java)에서 프로파일별로 설정 -->
+    <bean class="iros.api.common.config.CxfConfig"/>
 
 </beans>

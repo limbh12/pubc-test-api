@@ -1,6 +1,6 @@
-package iros.test.user.mock;
+package iros.api.pubc.mock;
 
-import iros.test.user.domain.UserCrtfcVO;
+import iros.api.pubc.domain.UserCrtfcVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;

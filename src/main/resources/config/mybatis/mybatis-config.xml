@@ -41,8 +41,8 @@
         <typeAlias alias="List" type="java.util.List"/>
 
         <!-- Domain Objects -->
-        <typeAlias alias="CultureFacilityVO" type="iros.test.facility.domain.CultureFacilityVO"/>
-        <typeAlias alias="UserCrtfcVO" type="iros.test.user.domain.UserCrtfcVO"/>
+        <typeAlias alias="CultureFacilityVO" type="iros.api.facility.domain.CultureFacilityVO"/>
+        <typeAlias alias="UserCrtfcVO" type="iros.api.pubc.domain.UserCrtfcVO"/>
     </typeAliases>
 
     <!-- ================================================================ -->

@@ -44,7 +44,7 @@ public Response getList(@Context HttpServletRequest request) {
 
 **절대 생성하지 말 것**: POST/PUT/DELETE 엔드포인트, INSERT/UPDATE/DELETE SQL
 
-**구현된 엔드포인트** (`CultureFacilityRestService.java`):
+**구현된 엔드포인트** (`CultureFacilityRestController.java`):
 ```java
 @GET @Path("")                    // 목록 조회
 @GET @Path("/{facilityId}")       // 상세 조회
@@ -116,7 +116,7 @@ curl "http://localhost:8080/pubc-test-api/api/facilities?serviceKey=TEST_KEY_001
 src/main/java/iros/test/
 ├── facility/                           # 문화시설 도메인 (핵심)
 │   ├── controller/
-│   │   └── CultureFacilityRestService.java  # JAX-RS 컨트롤러
+│   │   └── CultureFacilityRestController.java  # JAX-RS 컨트롤러
 │   ├── service/
 │   │   ├── CultureFacilityService.java      # 서비스 인터페이스
 │   │   └── CultureFacilityServiceImpl.java  # 서비스 구현
@@ -181,7 +181,7 @@ Optional.ofNullable(mapper.selectFacilityById(id))
 **구현된 엔드포인트**:
 ```java
 @Path("/facilities")
-public class CultureFacilityRestService {
+public class CultureFacilityRestController {
     
     @GET @Path("")
     // GET /api/facilities?serviceKey={key}&facilityType={type}&pageNum=1&pageSize=10

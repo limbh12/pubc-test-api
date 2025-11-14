@@ -5,13 +5,13 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>iros.test</groupId>
+    <groupId>iros.api</groupId>
     <artifactId>pubc-test-api</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
-    <name>PUBC Test API</name>
-    <description>PUBC 모듈 연동 OpenAPI 테스트 프로젝트</description>
+    <name>PUBC 모듈 전환 Test API</name>
+    <description>PUBC 모듈 전환(분산형 → 분산개선형, 중앙형) OpenAPI 테스트 프로젝트</description>
 
     <properties>
         <!-- Java Version -->
@@ -142,6 +142,11 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
             <version>${jackson.version}</version>
@@ -223,12 +228,41 @@
         <!-- ================================================================ -->
         <!-- PUBC Module (External JAR - System Scope) -->
         <!-- ================================================================ -->
+        
+        <!-- PUBC 분산형 모듈 (Ver 1.1) -->
         <dependency>
             <groupId>iros.pubc</groupId>
-            <artifactId>iros_pubc</artifactId>
+            <artifactId>iros-pubc-distributed</artifactId>
             <version>1.1</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/iros_pubc_1.1.jar</systemPath>
+        </dependency>
+
+        <!-- PUBC 분산개선형 모듈 (Ver 1.0) -->
+        <dependency>
+            <groupId>iros.pubc</groupId>
+            <artifactId>pubc-distributed-improved</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/pubc-1.0.jar</systemPath>
+        </dependency>
+
+        <!-- PUBC 중앙형 모듈 (APIM Gateway Auth Ver 1.1) -->
+        <dependency>
+            <groupId>iros.pubc</groupId>
+            <artifactId>apim-gateway-auth</artifactId>
+            <version>1.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/apim-gateway-auth-1.1.jar</systemPath>
+        </dependency>
+
+        <!-- PUBC 암호화 유틸리티 -->
+        <dependency>
+            <groupId>iros.pubc</groupId>
+            <artifactId>iros-cipher</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/iros_cipher.jar</systemPath>
         </dependency>
 
         <!-- ================================================================ -->

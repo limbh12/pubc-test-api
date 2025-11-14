@@ -1,8 +1,8 @@
-package iros.test.facility.service;
+package iros.api.facility.service;
 
-import iros.test.common.exception.ResourceNotFoundException;
-import iros.test.facility.dao.CultureFacilityMapper;
-import iros.test.facility.domain.CultureFacilityVO;
+import iros.api.common.exception.ResourceNotFoundException;
+import iros.api.facility.dao.CultureFacilityMapper;
+import iros.api.facility.domain.CultureFacilityVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -20,8 +20,8 @@
     <!-- ================================================================ -->
     <!-- Component Scan for Controllers -->
     <!-- ================================================================ -->
-    <context:component-scan base-package="iros.test.**.controller"/>
-    <context:component-scan base-package="iros.test.**.web"/>
+    <context:component-scan base-package="iros.api.**.controller"/>
+    <context:component-scan base-package="iros.api.**.web"/>
 
     <!-- ================================================================ -->
     <!-- Spring MVC Configuration -->
@@ -70,7 +70,7 @@
         <mvc:interceptor>
             <mvc:mapping path="/api/**"/>
             <mvc:mapping path="/ws/**"/>
-            <bean class="iros.test.common.interceptor.PubcAuthInterceptor"/>
+            <bean class="iros.api.common.interceptor.PubcAuthInterceptor"/>
         </mvc:interceptor>
     </mvc:interceptors>
     -->
